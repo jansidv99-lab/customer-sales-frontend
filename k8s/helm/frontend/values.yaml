@@ -1,0 +1,65 @@
+# k8s/helm/frontend/values.yaml
+
+# ── Namespace ─────────────────────────────────────────────
+namespace: customer-sales
+
+# ── Image ─────────────────────────────────────────────────
+image:
+  repository: us-central1-docker.pkg.dev/waybackhome-mto0ibjp7iru8bkisr/customer-sales-repo/frontend
+  tag: latest
+  pullPolicy: Always
+
+# ── Replica count (free tier — keep at 1) ─────────────────
+replicaCount: 1
+
+# ── Service account ───────────────────────────────────────
+serviceAccount:
+  name: frontend-sa
+  gcpServiceAccount: gke-workload-sa@waybackhome-mto0ibjp7iru8bkisr.iam.gserviceaccount.com
+
+# ── Backend connection ────────────────────────────────────
+# Kubernetes internal DNS — frontend talks to backend inside cluster
+# Pattern: http://<release-name>-<chart-name>.<namespace>.svc.cluster.local
+config:
+  backendUrl: "http://backend-customer-sales-backend.customer-sales.svc.cluster.local"
+
+# ── Service ───────────────────────────────────────────────
+service:
+  type: LoadBalancer      # Exposed to internet — only frontend is public
+  port: 80
+  targetPort: 8501        # Streamlit default port
+
+# ── Resource limits (free tier optimized) ─────────────────
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 250m
+    memory: 256Mi
+
+# ── Probes ────────────────────────────────────────────────
+probes:
+  liveness:
+    path: /_stcore/health   # Streamlit built-in health endpoint
+    initialDelaySeconds: 20
+    periodSeconds: 30
+    failureThreshold: 3
+  readiness:
+    path: /_stcore/health
+    initialDelaySeconds: 15
+    periodSeconds: 15
+    failureThreshold: 3
+
+# ── HPA (free tier — conservative) ───────────────────────
+hpa:
+  enabled: true
+  minReplicas: 1
+  maxReplicas: 2
+  cpuUtilization: 70
+
+# ── Rolling update strategy ───────────────────────────────
+strategy:
+  rollingUpdate:
+    maxSurge: 1
+    maxUnavailable: 0      # Never take the only pod down before new one is ready

@@ -1,4 +1,4 @@
-# cloudbuild.yaml
+# cloudbuild.yaml — customer-sales-frontend
 steps:
   - name: 'gcr.io/cloud-builders/docker'
     args:
@@ -19,12 +19,23 @@ steps:
       - 'push'
       - 'us-central1-docker.pkg.dev/$PROJECT_ID/customer-sales-repo/frontend:latest'
 
+  - name: 'alpine/helm:3.14.0'
+    entrypoint: helm
+    args:
+      - 'upgrade'
+      - '--install'
+      - 'frontend'
+      - 'k8s/helm/frontend'
+      - '--namespace=customer-sales'
+      - '--create-namespace'
+      - '--set=image.tag=$COMMIT_SHA'
+      - '--set=image.repository=us-central1-docker.pkg.dev/$PROJECT_ID/customer-sales-repo/frontend'
+      - '--wait'
+      - '--timeout=3m'
+
 images:
   - 'us-central1-docker.pkg.dev/$PROJECT_ID/customer-sales-repo/frontend:$COMMIT_SHA'
   - 'us-central1-docker.pkg.dev/$PROJECT_ID/customer-sales-repo/frontend:latest'
 
 options:
-  logging: CLOUD_LOGGING_ONLY 
-
-substitutions:
-  _REGION: 'us-central1'
+  logging: CLOUD_LOGGING_ONLY

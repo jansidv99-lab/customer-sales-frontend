@@ -1,0 +1,13 @@
+# k8s/helm/frontend/Chart.yaml
+apiVersion: v2
+name: customer-sales-frontend
+description: Streamlit frontend dashboard for customer sales data
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+keywords:
+  - streamlit
+  - dashboard
+  - customer-sales
+maintainers:
+  - name: jansidv99-lab
