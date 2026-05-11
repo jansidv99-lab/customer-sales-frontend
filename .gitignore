@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+.env
+.venv/
+venv/
+*.json  # Prevents accidentally committing service account key files
