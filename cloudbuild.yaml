@@ -1,5 +1,6 @@
 # cloudbuild.yaml — customer-sales-frontend
 steps:
+  # Step 1: Build the Docker image
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - 'build'
@@ -9,16 +10,33 @@ steps:
       - 'us-central1-docker.pkg.dev/$PROJECT_ID/customer-sales-repo/frontend:latest'
       - '.'
 
+  # Step 2: Push commit SHA tag
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - 'push'
       - 'us-central1-docker.pkg.dev/$PROJECT_ID/customer-sales-repo/frontend:$COMMIT_SHA'
 
+  # Step 3: Push latest tag
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - 'push'
       - 'us-central1-docker.pkg.dev/$PROJECT_ID/customer-sales-repo/frontend:latest'
 
+  # Step 4: Authenticate to GKE cluster
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'container'
+      - 'clusters'
+      - 'get-credentials'
+      - 'customer-sales-cluster'
+      - '--region=us-central1'
+      - '--project=$PROJECT_ID'
+    volumes:
+      - name: kubeconfig
+        path: /root/.kube
+
+  # Step 5: Helm upgrade
   - name: 'alpine/helm:3.14.0'
     entrypoint: helm
     args:
@@ -32,6 +50,9 @@ steps:
       - '--set=image.repository=us-central1-docker.pkg.dev/$PROJECT_ID/customer-sales-repo/frontend'
       - '--wait'
       - '--timeout=3m'
+    volumes:
+      - name: kubeconfig
+        path: /root/.kube
 
 images:
   - 'us-central1-docker.pkg.dev/$PROJECT_ID/customer-sales-repo/frontend:$COMMIT_SHA'
