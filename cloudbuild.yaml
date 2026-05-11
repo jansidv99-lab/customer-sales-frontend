@@ -19,37 +19,30 @@ steps:
       - 'push'
       - 'us-central1-docker.pkg.dev/$PROJECT_ID/customer-sales-repo/frontend:latest'
 
-  # Step 4: Authenticate to GKE — volume declared HERE
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    entrypoint: gcloud
+    entrypoint: bash
     args:
-      - 'container'
-      - 'clusters'
-      - 'get-credentials'
-      - 'customer-sales-cluster'
-      - '--region=us-central1'
-      - '--project=$PROJECT_ID'
-    volumes:
-      - name: kubeconfig
-        path: /root/.kube
+      - '-c'
+      - |
+        # Install Helm
+        curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
 
-  # Step 5: Helm upgrade — volume mounted HERE too
-  - name: 'alpine/helm:3.14.0'
-    entrypoint: helm
-    args:
-      - 'upgrade'
-      - '--install'
-      - 'frontend'
-      - 'k8s/helm/frontend'
-      - '--namespace=customer-sales'
-      - '--create-namespace'
-      - '--set=image.tag=$COMMIT_SHA'
-      - '--set=image.repository=us-central1-docker.pkg.dev/$PROJECT_ID/customer-sales-repo/frontend'
-      - '--wait'
-      - '--timeout=3m'
-    volumes:
-      - name: kubeconfig
-        path: /root/.kube
+        # Authenticate to GKE cluster
+        gcloud container clusters get-credentials customer-sales-cluster \
+          --region=us-central1 \
+          --project=$PROJECT_ID
+
+        # Create namespace only if it does not already exist
+        kubectl get namespace customer-sales || \
+          kubectl create namespace customer-sales
+
+        # Run Helm upgrade — no --create-namespace flag needed now
+        helm upgrade --install frontend k8s/helm/frontend \
+          --namespace=customer-sales \
+          --set=image.tag=$COMMIT_SHA \
+          --set=image.repository=us-central1-docker.pkg.dev/$PROJECT_ID/customer-sales-repo/frontend \
+          --wait \
+          --timeout=3m
 
 images:
   - 'us-central1-docker.pkg.dev/$PROJECT_ID/customer-sales-repo/frontend:$COMMIT_SHA'
